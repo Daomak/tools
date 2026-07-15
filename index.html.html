@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daokits 集成式工具箱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            /* 替换纯浅灰白，去掉渐变更干净 */
+            background-color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px 16px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        /* 主标题 */
+        .main-title {
+            font-size: 2.8rem;
+            font-weight: 600;
+            color: #0f172a;
+            letter-spacing: 1px;
+        }
+        /* 运行提示小字 */
+        .tip-desc {
+            font-size: 1rem;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+        /* 命令卡片容器 */
+        .cmd-wrap {
+            width: auto;
+            max-width: 94vw;
+            display: inline-flex;
+            overflow: hidden;
+            border-radius: 16px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 12px rgba(15, 30, 60, 0.05);
+            transition: all 0.28s ease;
+        }
+        .cmd-wrap:hover {
+            box-shadow: 0 6px 22px rgba(15, 30, 60, 0.08);
+            transform: translateY(-2px);
+        }
+        /* 代码文本区域 */
+        .code-content {
+            white-space: nowrap;
+            overflow-x: auto;
+            flex-shrink: 0;
+            padding: 14px 20px;
+            font-family: Consolas, Menlo, monospace;
+            font-size: 0.98rem;
+            color: #1e293b;
+        }
+        /* 复制按钮 */
+        .copy-btn {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 0 26px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            flex-shrink: 0;
+        }
+        .copy-btn:hover {
+            background: #2563eb;
+        }
+        .copy-btn.copied {
+            background: #10b981;
+        }
+        /* 复制成功弹窗 */
+        .toast {
+            position: fixed;
+            top: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: #ffffff;
+            color: #1e293b;
+            padding: 12px 28px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.07);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        @media (max-width:768px) {
+            .main-title {
+                font-size: 2rem;
+            }
+            .code-content {
+                font-size: 0.88rem;
+                padding: 12px 16px;
+            }
+            .copy-btn {
+                padding: 0 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="main-title">Daokits 集成式工具箱</h1>
+        <div class="tip-desc">请以管理员身份打开 Windows PowerShell 执行下方命令</div>
+
+        <div class="cmd-wrap">
+            <div class="code-content" id="cmdText">iwr https://github.com/TsangHungDao/DaoKits/releases/download/GA/Daokits.exe -o $home\Desktop\Daokits.exe</div>
+            <button class="copy-btn" id="copyBtn">复制</button>
+        </div>
+    </div>
+
+    <div class="toast" id="copyToast">命令已复制到剪贴板</div>
+
+    <script>
+        const copyBtn = document.getElementById('copyBtn');
+        const cmdText = document.getElementById('cmdText').innerText;
+        const toast = document.getElementById('copyToast');
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                // 复制文本
+                await navigator.clipboard.writeText(cmdText);
+                // 按钮变色反馈
+                copyBtn.classList.add('copied');
+                // 弹窗弹出
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                    toast.classList.remove('show');
+                }, 2000);
+            } catch (err) {
+                alert('复制失败，请手动复制链接：' + cmdText);
+            }
+        })
+    </script>
+</body>
+</html>
