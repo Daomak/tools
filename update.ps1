@@ -2,16 +2,36 @@
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # ==========================================
-# Config
+# Config (defaults, can be overridden by update.ini)
 # ==========================================
-$downloadUrl = "https://github.com/Daomak/tools/releases/download/GA/Daokits.zip"
+$downloadUrls = @(
+    "http://nas.daomak.com:9980/SF/DP/Daokits/Daokits.zip",
+    "https://ghproxy.com/https://github.com/Daomak/tools/releases/download/GA/Daokits.zip",
+    "https://github.com/Daomak/tools/releases/download/GA/Daokits.zip"
+)
 $targetDir = "..\"
-$mainExe = "DaoKits"
+$mainExe = "daokits"
 # ==========================================
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$zipName = [System.IO.Path]::GetFileName($downloadUrl)
-if (-not $zipName.EndsWith('.zip')) { $zipName += '.zip' }
+$iniPath = Join-Path $scriptDir "update.ini"
+
+# Load external config if exists
+if (Test-Path $iniPath) {
+    $iniUrls = @()
+    Get-Content $iniPath -Encoding Default | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -match '^url\d+=(.+)$') {
+            $url = $Matches[1].Trim()
+            if ($url) { $iniUrls += $url }
+        }
+        if ($line -match '^target=(.+)$') { $script:targetDir = $Matches[1].Trim() }
+        if ($line -match '^exe=(.+)$') { $script:mainExe = $Matches[1].Trim() }
+    }
+    if ($iniUrls.Count -gt 0) { $script:downloadUrls = $iniUrls | Select-Object -Unique }
+}
+
+$zipName = "Daokits.zip"
 
 if (-not [System.IO.Path]::IsPathRooted($targetDir)) {
     $targetDir = Join-Path $scriptDir $targetDir
@@ -63,57 +83,108 @@ Write-Host "Environment OK"
 Write-Host ""
 
 # ==========================================
-# Step 1: Download
+# Step 1: Download (speed test + fallback)
 # ==========================================
 Write-Host "[1/3] Downloading update..."
-Write-Host "URL: $downloadUrl"
+
+# Speed test all URLs concurrently
+Write-Host "Testing $($downloadUrls.Count) source(s)..."
+$speedResults = @{}
+$speedJobs = @()
+$idx = 0
+foreach ($url in $downloadUrls) {
+    $idx++
+    $speedJobs += Start-Job -ScriptBlock {
+        param($u, $i)
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        try {
+            $req = [System.Net.HttpWebRequest]::Create($u)
+            $req.Method = "HEAD"
+            $req.Timeout = 5000
+            $resp = $req.GetResponse()
+            $sw.Stop()
+            $size = $resp.ContentLength
+            $resp.Close()
+            return @{ Index = $i; Url = $u; Ms = $sw.ElapsedMilliseconds; Size = $size; OK = $true }
+        } catch {
+            $sw.Stop()
+            return @{ Index = $i; Url = $u; Ms = 99999; Size = 0; OK = $false }
+        }
+    } -ArgumentList $url, $idx
+}
+$null = Wait-Job $speedJobs
+foreach ($j in $speedJobs) {
+    $r = Receive-Job $j
+    if ($r.OK) {
+        Write-Host "  Source $($r.Index): $($r.Ms)ms"
+    } else {
+        Write-Host "  Source $($r.Index): unreachable"
+    }
+    $speedResults[$r.Index] = $r
+}
+Remove-Job $speedJobs
+
+# Sort by speed, fastest first
+$sortedUrls = $speedResults.Values | Sort-Object Ms | ForEach-Object { $_.Url }
+if ($sortedUrls.Count -eq 0) { $sortedUrls = $downloadUrls }
 Write-Host ""
 
-$totalSize = 0
-try {
-    $req = [System.Net.HttpWebRequest]::Create($downloadUrl)
-    $req.Method = "HEAD"
-    $resp = $req.GetResponse()
-    $totalSize = $resp.ContentLength
-    $resp.Close()
-} catch {}
+$downloadOk = $false
+$urlIndex = 0
+foreach ($downloadUrl in $sortedUrls) {
+    $urlIndex++
+    $totalSize = 0
+    if ($speedResults.ContainsValue(($speedResults.Values | Where-Object Url -eq $downloadUrl | Select-Object -First 1))) {
+        $totalSize = ($speedResults.Values | Where-Object Url -eq $downloadUrl | Select-Object -First 1).Size
+    }
 
-$downloadJob = Start-Job -ScriptBlock {
-    param($url, $zipFile)
-    $wc = New-Object System.Net.WebClient
-    $wc.DownloadFile($url, $zipFile)
-} -ArgumentList $downloadUrl, $zipFile
+    $downloadJob = Start-Job -ScriptBlock {
+        param($url, $zipFile)
+        $wc = New-Object System.Net.WebClient
+        $wc.DownloadFile($url, $zipFile)
+    } -ArgumentList $downloadUrl, $zipFile
 
-$lastPercent = -1
-while ($downloadJob.State -eq 'Running') {
-    Start-Sleep -Milliseconds 100
-    if ($totalSize -gt 0 -and (Test-Path $zipFile)) {
-        $cur = (Get-Item $zipFile).Length
-        $pct = [math]::Min([math]::Round($cur / $totalSize * 100, 0), 99)
-        if ($pct -ne $lastPercent) {
-            $lastPercent = $pct
-            $rMB = [math]::Round($cur / 1MB, 2)
-            $tMB = [math]::Round($totalSize / 1MB, 2)
-            $bar = "o" * ([math]::Round($pct / 100 * 30)) + " " * (30 - [math]::Round($pct / 100 * 30))
-            Write-Host "`rDownloading $pct% ($rMB / $tMB MB) [$bar]" -NoNewline
-            [Console]::Out.Flush()
+    $lastPercent = -1
+    while ($downloadJob.State -eq 'Running') {
+        Start-Sleep -Milliseconds 100
+        if ($totalSize -gt 0 -and (Test-Path $zipFile)) {
+            $cur = (Get-Item $zipFile).Length
+            $pct = [math]::Min([math]::Round($cur / $totalSize * 100, 0), 99)
+            if ($pct -ne $lastPercent) {
+                $lastPercent = $pct
+                $rMB = [math]::Round($cur / 1MB, 2)
+                $tMB = [math]::Round($totalSize / 1MB, 2)
+                $bar = "o" * ([math]::Round($pct / 100 * 30)) + " " * (30 - [math]::Round($pct / 100 * 30))
+                Write-Host "`rDownloading $pct% ($rMB / $tMB MB) [$bar]" -NoNewline
+                [Console]::Out.Flush()
+            }
         }
     }
-}
-Wait-Job $downloadJob | Out-Null
-Receive-Job $downloadJob -ErrorAction SilentlyContinue | Out-Null
-Remove-Job $downloadJob
+    Wait-Job $downloadJob | Out-Null
+    Receive-Job $downloadJob -ErrorAction SilentlyContinue | Out-Null
+    Remove-Job $downloadJob
 
-if (-not (Test-Path $zipFile) -or (Get-Item $zipFile).Length -eq 0) {
+    if (Test-Path $zipFile) {
+        $fileSize = (Get-Item $zipFile).Length
+        if ($fileSize -gt 0) {
+            $downloadOk = $true
+            $finalMB = [math]::Round($fileSize / 1MB, 2)
+            Write-Host "`rDownloading 100% ($finalMB MB) [oooooooooooooooooooooooooooooo]"
+            Write-Host "Download complete!"
+            Write-Host ""
+            break
+        }
+    }
+
+    Write-Host "`rSource failed, trying next..."
     Write-Host ""
-    Write-Host "Download failed!"
+    Remove-Item $zipFile -Force -ErrorAction SilentlyContinue
+}
+
+if (-not $downloadOk) {
+    Write-Host "All download sources failed!"
     exit 1
 }
-
-$finalMB = [math]::Round((Get-Item $zipFile).Length / 1MB, 2)
-Write-Host "`rDownloading 100% ($finalMB MB) [oooooooooooooooooooooooooooooo]"
-Write-Host "Download complete!"
-Write-Host ""
 
 # ==========================================
 # Step 2: Extract
