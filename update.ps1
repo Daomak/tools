@@ -122,48 +122,44 @@ Write-Host "$($downloadUrls.Count)" -ForegroundColor White -NoNewline
 Write-Host " source(s)..." -ForegroundColor Gray
 
 $results = @()
-$speedJobs = @()
 $idx = 0
 foreach ($url in $downloadUrls) {
     $idx++
     $name = if ($urlNames.ContainsKey($url)) { $urlNames[$url] } else { "Source $idx" }
-    $speedJobs += Start-Job -ScriptBlock {
-        param($u, $n)
-        $sw = [System.Diagnostics.Stopwatch]::StartNew()
-        try {
-            $req = [System.Net.HttpWebRequest]::Create($u)
-            $req.Method = "HEAD"
-            $req.Timeout = 5000
-            $resp = $req.GetResponse()
-            $sw.Stop()
-            $size = $resp.ContentLength
-            $resp.Close()
-            return @{ Name = $n; Url = $u; Ms = [int64]$sw.ElapsedMilliseconds; Size = $size; OK = $true }
-        } catch {
-            $sw.Stop()
-            return @{ Name = $n; Url = $u; Ms = [int64]99999; Size = 0; OK = $false }
-        }
-    } -ArgumentList $url, $name
-}
-$null = Wait-Job $speedJobs
-foreach ($j in $speedJobs) {
-    $r = Receive-Job $j
-    $results += $r
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $ok = $false
+    $size = 0
+    $ms = 99999
+    try {
+        $req = [System.Net.HttpWebRequest]::Create($url)
+        $req.Method = "HEAD"
+        $req.Timeout = 5000
+        $resp = $req.GetResponse()
+        $sw.Stop()
+        $size = $resp.ContentLength
+        $resp.Close()
+        $ms = [int64]$sw.ElapsedMilliseconds
+        $ok = $true
+    } catch {
+        $sw.Stop()
+        $ms = [int64]99999
+        $ok = $false
+    }
+    $results += [PSCustomObject]@{ Name = $name; Url = $url; Ms = $ms; Size = $size; OK = $ok }
     Write-Host "  " -NoNewline
-    if ($r.OK) {
-        Write-Host "$($r.Name)" -ForegroundColor White -NoNewline
+    if ($ok) {
+        Write-Host "$name" -ForegroundColor White -NoNewline
         Write-Host ": " -NoNewline
-        Write-Host "$($r.Ms)ms" -ForegroundColor Green
+        Write-Host "${ms}ms" -ForegroundColor Green
     } else {
-        Write-Host "$($r.Name)" -ForegroundColor DarkGray -NoNewline
+        Write-Host "$name" -ForegroundColor DarkGray -NoNewline
         Write-Host ": " -NoNewline
         Write-Host "unreachable" -ForegroundColor Red
     }
 }
-Remove-Job $speedJobs
 
 # Sort by speed, fastest first, skip unreachable
-$sortedUrls = $results | Where-Object { $_.OK } | Sort-Object { [int64]$_.Ms } | ForEach-Object { $_.Url }
+$sortedUrls = $results | Where-Object { $_.OK } | Sort-Object Ms | ForEach-Object { $_.Url }
 if ($sortedUrls.Count -eq 0) { $sortedUrls = $downloadUrls }
 Write-Host ""
 
