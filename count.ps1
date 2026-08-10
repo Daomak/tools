@@ -11,7 +11,7 @@ if (Test-Path $binDir) {
     $count = (Get-ChildItem $binDir -Recurse -File -ErrorAction SilentlyContinue | Measure-Object).Count
 }
 
-$statFile = Join-Path $PSScriptRoot "文件统计.ini"
+$statFile = Join-Path $PSScriptRoot "file_count.ini"
 $updateCount = 0
 if (Test-Path $statFile) {
     Get-Content $statFile -Encoding Default | ForEach-Object {
