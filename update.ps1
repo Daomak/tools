@@ -121,7 +121,7 @@ Write-Host "Testing " -ForegroundColor Gray -NoNewline
 Write-Host "$($downloadUrls.Count)" -ForegroundColor White -NoNewline
 Write-Host " source(s)..." -ForegroundColor Gray
 
-$speedResults = @{}
+$results = @()
 $speedJobs = @()
 $idx = 0
 foreach ($url in $downloadUrls) {
@@ -138,16 +138,17 @@ foreach ($url in $downloadUrls) {
             $sw.Stop()
             $size = $resp.ContentLength
             $resp.Close()
-            return @{ Name = $n; Url = $u; Ms = $sw.ElapsedMilliseconds; Size = $size; OK = $true }
+            return @{ Name = $n; Url = $u; Ms = [int64]$sw.ElapsedMilliseconds; Size = $size; OK = $true }
         } catch {
             $sw.Stop()
-            return @{ Name = $n; Url = $u; Ms = 99999; Size = 0; OK = $false }
+            return @{ Name = $n; Url = $u; Ms = [int64]99999; Size = 0; OK = $false }
         }
     } -ArgumentList $url, $name
 }
 $null = Wait-Job $speedJobs
 foreach ($j in $speedJobs) {
     $r = Receive-Job $j
+    $results += $r
     Write-Host "  " -NoNewline
     if ($r.OK) {
         Write-Host "$($r.Name)" -ForegroundColor White -NoNewline
@@ -158,20 +159,20 @@ foreach ($j in $speedJobs) {
         Write-Host ": " -NoNewline
         Write-Host "unreachable" -ForegroundColor Red
     }
-    $speedResults[$r.Url] = $r
 }
 Remove-Job $speedJobs
 
 # Sort by speed, fastest first, skip unreachable
-$sortedUrls = $speedResults.Values | Where-Object { $_.OK } | Sort-Object Ms | ForEach-Object { $_.Url }
+$sortedUrls = $results | Where-Object { $_.OK } | Sort-Object { [int64]$_.Ms } | ForEach-Object { $_.Url }
 if ($sortedUrls.Count -eq 0) { $sortedUrls = $downloadUrls }
 Write-Host ""
 
 $downloadOk = $false
 foreach ($downloadUrl in $sortedUrls) {
     $totalSize = 0
-    if ($speedResults.ContainsKey($downloadUrl)) {
-        $totalSize = $speedResults[$downloadUrl].Size
+    $match = $results | Where-Object { $_.Url -eq $downloadUrl } | Select-Object -First 1
+    if ($match) {
+        $totalSize = $match.Size
     }
     $srcName = if ($urlNames.ContainsKey($downloadUrl)) { $urlNames[$downloadUrl] } else { "source" }
     Write-Host "Downloading from " -ForegroundColor Gray -NoNewline
