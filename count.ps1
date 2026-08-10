@@ -1,4 +1,4 @@
-﻿# 极简单文件统计，GBK编码输出
+﻿# DaoKits file counter
 $binDir = Join-Path (Split-Path -Parent $PSScriptRoot) "bin"
 $count = 0
 if (Test-Path $binDir) {
@@ -15,3 +15,23 @@ if (Test-Path $statFile) {
 
 $out = "[文件统计]`r`n更新库数=$updateCount`r`n实际库数=$count`r`n"
 [System.IO.File]::WriteAllText($statFile, $out, [System.Text.Encoding]::GetEncoding("GBK"))
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "        DaoKits File Counter" -ForegroundColor White
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Updated: " -ForegroundColor Gray -NoNewline
+Write-Host "$updateCount" -ForegroundColor White -NoNewline
+Write-Host " files" -ForegroundColor Gray
+Write-Host "Actual:  " -ForegroundColor Gray -NoNewline
+Write-Host "$count" -ForegroundColor White -NoNewline
+Write-Host " files" -ForegroundColor Gray
+Write-Host ""
+if ($count -eq $updateCount) {
+    Write-Host "Status: " -ForegroundColor Gray -NoNewline
+    Write-Host "In sync" -ForegroundColor Green
+} else {
+    Write-Host "Status: " -ForegroundColor Gray -NoNewline
+    Write-Host "Mismatch" -ForegroundColor Yellow
+}
+Write-Host ""
