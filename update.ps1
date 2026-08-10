@@ -1,6 +1,13 @@
 ﻿# DaoKits Auto Update Script (Single File)
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Check admin
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
 # ==========================================
 # Config (defaults, can be overridden by update.ini)
 # ==========================================

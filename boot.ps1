@@ -1,6 +1,13 @@
 # DaoKits one-click update
 # Usage: irm https://tools.daomak.com/boot.ps1 | iex
 
+# Check admin
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm https://tools.daomak.com/boot.ps1 | iex`""
+    exit
+}
+
 $dir = "C:\Daokits\update"
 $base = "https://tools.daomak.com"
 

