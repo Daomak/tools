@@ -162,8 +162,8 @@ foreach ($j in $speedJobs) {
 }
 Remove-Job $speedJobs
 
-# Sort by speed, fastest first
-$sortedUrls = $speedResults.Values | Sort-Object Ms | ForEach-Object { $_.Url }
+# Sort by speed, fastest first, skip unreachable
+$sortedUrls = $speedResults.Values | Where-Object { $_.OK } | Sort-Object Ms | ForEach-Object { $_.Url }
 if ($sortedUrls.Count -eq 0) { $sortedUrls = $downloadUrls }
 Write-Host ""
 
