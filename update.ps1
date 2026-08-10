@@ -54,7 +54,7 @@ $targetDir = [System.IO.Path]::GetFullPath($targetDir)
 
 $zipFile = Join-Path $scriptDir $zipName
 $tempDir = Join-Path $scriptDir "temp_update"
-$logFile = Join-Path $scriptDir "更新日志.ini"
+$logFile = Join-Path $scriptDir "update_log.ini"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "        DaoKits Updater" -ForegroundColor White
@@ -410,7 +410,7 @@ $binCount = 0
 if (Test-Path $binDir) {
     $binCount = (Get-ChildItem $binDir -Recurse -File | Measure-Object).Count
 }
-$statFile = Join-Path $scriptDir "文件统计.ini"
+$statFile = Join-Path $scriptDir "file_count.ini"
 $stat = "[文件统计]`r`n更新库数=$binCount`r`n"
 [System.IO.File]::WriteAllText($statFile, $stat, [System.Text.Encoding]::GetEncoding("GBK"))
 
