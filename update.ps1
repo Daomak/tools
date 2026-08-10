@@ -4,7 +4,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 # ==========================================
 # Config
 # ==========================================
-$downloadUrl = "https://github.com/Daomak/tools/releases/latest/download/Daokits.zip"
+$downloadUrl = "https://github.com/Daomak/tools/releases/download/GA/Daokits.zip"
 $targetDir = "..\"
 $mainExe = "DaoKits"
 # ==========================================
