@@ -467,7 +467,8 @@ if (-not (Test-Path $desktopFlag) -and -not (Test-Path $desktopPath)) {
 }
 
 # Update complete - do not auto-launch (avoids privilege inheritance issues)
-Write-Host "Update complete! Please start " -ForegroundColor Green -NoNewline
-Write-Host $mainExe -ForegroundColor White -NoNewline
-Write-Host " manually." -ForegroundColor Green
+Write-Host "Update complete!" -ForegroundColor Green
 Write-Host ""
+
+Add-Type -AssemblyName System.Windows.Forms
+[System.Windows.Forms.MessageBox]::Show("Daokits 更新完成！", "DaoKits", "OK", "Information") | Out-Null
