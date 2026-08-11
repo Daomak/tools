@@ -299,6 +299,9 @@ Write-Host "Extract " -ForegroundColor Green -NoNewline
 Write-Host "complete!" -ForegroundColor White
 Write-Host ""
 
+# Unblock all extracted files (remove Mark of the Web)
+Get-ChildItem $tempDir -Recurse -File | ForEach-Object { Unblock-File $_.FullName -ErrorAction SilentlyContinue }
+
 $updateFileList = Get-ChildItem -Path $tempDir -Recurse -File | ForEach-Object {
     $_.FullName.Substring($tempDir.Length + 1)
 }
@@ -463,15 +466,8 @@ if (-not (Test-Path $desktopFlag) -and -not (Test-Path $desktopPath)) {
     }
 }
 
-# Launch main exe
-if ($mainExe) {
-    if (-not $mainExe.EndsWith('.exe')) { $mainExe += '.exe' }
-    $exePath = Join-Path $targetDir $mainExe
-    if (Test-Path $exePath) {
-        Write-Host "Starting " -ForegroundColor Gray -NoNewline
-        Write-Host $mainExe -ForegroundColor White -NoNewline
-        Write-Host "..." -ForegroundColor Gray
-        Start-Process -FilePath $exePath -WorkingDirectory $targetDir
-        Start-Sleep -Milliseconds 500
-    }
-}
+# Update complete - do not auto-launch (avoids privilege inheritance issues)
+Write-Host "Update complete! Please start " -ForegroundColor Green -NoNewline
+Write-Host $mainExe -ForegroundColor White -NoNewline
+Write-Host " manually." -ForegroundColor Green
+Write-Host ""
