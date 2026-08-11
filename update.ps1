@@ -470,5 +470,27 @@ if (-not (Test-Path $desktopFlag) -and -not (Test-Path $desktopPath)) {
 Write-Host "Update complete!" -ForegroundColor Green
 Write-Host ""
 
+# Launch main exe
+if ($mainExe) {
+    if (-not $mainExe.EndsWith('.exe')) { $mainExe += '.exe' }
+    $exePath = Join-Path $targetDir $mainExe
+    if (Test-Path $exePath) {
+        Write-Host "Starting " -ForegroundColor Gray -NoNewline
+        Write-Host $mainExe -ForegroundColor White -NoNewline
+        Write-Host "..." -ForegroundColor Gray
+        Start-Process -FilePath $exePath -WorkingDirectory $targetDir
+        Start-Sleep -Milliseconds 500
+    }
+}
+
+# Show toast notification
 Add-Type -AssemblyName System.Windows.Forms
-[System.Windows.Forms.MessageBox]::Show("Daokits 更新完成！", "DaoKits", "OK", "Information") | Out-Null
+Add-Type -AssemblyName System.Drawing
+$tip = New-Object System.Windows.Forms.NotifyIcon
+$tip.Icon = [System.Drawing.SystemIcons]::Information
+$tip.BalloonTipTitle = "DaoKits"
+$tip.BalloonTipText = "更新完成！"
+$tip.Visible = $true
+$tip.ShowBalloonTip(5000)
+Start-Sleep -Seconds 5
+$tip.Dispose()
